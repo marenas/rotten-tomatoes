@@ -20,6 +20,7 @@
 @property (weak, nonatomic) IBOutlet UILabel *networkErrorLabel;
 
 @property (nonatomic, strong) NSArray *movies;
+@property (nonatomic, assign) MoviesViewControllerType type;
 
 - (void)handleConnectionError:(NSError *)error;
 - (void)fetchData:(id)sender;
@@ -28,6 +29,23 @@
 @end
 
 @implementation MoviesViewController
+
+- (id)initWithType:(MoviesViewControllerType)type {
+
+    UIStoryboard *storyboard = [UIStoryboard storyboardWithName:@"Main" bundle:nil];
+    self = [storyboard instantiateViewControllerWithIdentifier:@"MoviesViewController"];
+    
+    self.type = type;
+    switch (self.type) {
+        case MoviesViewControllerTypeBoxOffice:
+            self.title = @"Theater Movies";
+            break;
+        case MoviesViewControllerTypeDvd:
+            self.title = @"DVD Movies";
+            break;
+    }
+    return self;
+}
 
 - (void)viewDidLoad {
     [super viewDidLoad];
@@ -42,6 +60,7 @@
     [refreshControl addTarget:self action:@selector(fetchData:) forControlEvents:UIControlEventValueChanged];
     tableViewController.refreshControl = refreshControl;
     
+    [self.tabBarController.tabBar setHidden:NO];
     //get data
     [SVProgressHUD showWithStatus:@"Loading..."];
     [self fetchData:nil];
@@ -58,30 +77,25 @@
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-//    MovieCell *cell = [tableView dequeueReusableCellWithIdentifier:@"MyMovieCell" forIndexPath:indexPath];
     MovieCell *cell = [tableView dequeueReusableCellWithIdentifier:@"MovieCell" forIndexPath:indexPath];
     
     NSDictionary *movie = self.movies[indexPath.row];
     
-//    cell.textLabel.text = movie[@"title"];
     cell.movieTitleLabel.text = movie[@"title"];
     cell.synopsisLabel.text = movie[@"synopsis"];
     
     NSDictionary *posters = movie[@"posters"];
     NSString *posterUrlString = posters[@"detailed"];
-    [cell.posterView setImageWithURL:[NSURL URLWithString:posterUrlString]];
-    return cell;
-}
-
--(NSIndexPath *)tableView:(UITableView *)tableView willSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-    MovieCell *cell = (MovieCell *)[tableView cellForRowAtIndexPath:indexPath];
-//    [cell.lbls setTextColor:[UIColor whiteColor]];
-    cell.selectionStyle = UITableViewCellSelectionStyleNone;
+    [cell.posterView setImageWithURLRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:posterUrlString]] placeholderImage:nil success:^(NSURLRequest *request, NSHTTPURLResponse *response, UIImage *image) {
+        // fade in the image
+        cell.posterView.image = image;
+        cell.posterView.alpha = 0.0;
+        [UIView animateWithDuration:0.5 animations:^{
+            cell.posterView.alpha = 1.0;
+        }];
+    } failure:nil];
     
-    UIView *selectedView = [[UIView alloc]init];
-    selectedView.backgroundColor = [UIColor redColor];
-    cell.selectedBackgroundView =  selectedView;
-    return indexPath;
+    return cell;
 }
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
@@ -100,6 +114,7 @@
         NSIndexPath *indexPath = [self.tableView indexPathForSelectedRow];
         NSDictionary *movieDetail = [[NSDictionary alloc] initWithDictionary:self.movies[indexPath.row]];
         movieDetailsViewController.movieDetail = movieDetail;
+        movieDetailsViewController.hidesBottomBarWhenPushed = YES;
     }
 }
 
@@ -121,20 +136,25 @@
 }
 
 - (void)fetchData:(id)sender {
-    NSString *url = @"http://api.rottentomatoes.com/api/public/v1.0/lists/movies/in_theaters.json?apikey=ws32mxpd653h5c8zqfvksxw9";
+
+    NSString *urlString;
+    switch (self.type) {
+        case MoviesViewControllerTypeBoxOffice:
+            urlString = @"http://api.rottentomatoes.com/api/public/v1.0/lists/movies/box_office.json?apikey=ws32mxpd653h5c8zqfvksxw9";
+            break;
+        case MoviesViewControllerTypeDvd:
+            urlString = @"http://api.rottentomatoes.com/api/public/v1.0/lists/dvds/top_rentals.json?apikey=ws32mxpd653h5c8zqfvksxw9";
+            break;
+        default:
+            // this shouldn't happen
+            NSAssert(false, @"Invalid type %ld", self.type);
+    }
     
-    //    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
-    //    [NSURLConnection sendAsynchronousRequest:request queue:[NSOperationQueue mainQueue] completionHandler:^(NSURLResponse *response, NSData *data, NSError *connectionError) {
-    //        id object = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-    //        self.movies = object[@"movies"];
-    //        [self.tableView reloadData];
-    //        NSLog(@"%@", object);
-    //    }];
-    
-    //    NSString *url = @"http://api.rottentomatoes.com/api/public/v1.0/lists/dvds/top_rentals.json?apikey=g9au4hv6khv6wzvzgt55gpqs";
+    NSURL *url = [NSURL URLWithString:urlString];
+    NSURLRequest *request = [NSURLRequest requestWithURL:url cachePolicy:NSURLRequestReturnCacheDataElseLoad timeoutInterval:5.0];
     
     //        NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:url] cachePolicy:NSURLRequestReturnCacheDataElseLoad timeoutInterval:5.0];
-    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
+//    NSURLRequest *request = [NSURLRequest requestWithURL:[NSURL URLWithString:url]];
     
     AFHTTPRequestOperation *operation = [[AFHTTPRequestOperation alloc] initWithRequest:request];
     operation.responseSerializer = [AFJSONResponseSerializer serializer];

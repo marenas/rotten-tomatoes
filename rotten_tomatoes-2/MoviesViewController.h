@@ -10,4 +10,11 @@
 
 @interface MoviesViewController : UIViewController <UITableViewDataSource, UITableViewDelegate>
 
+typedef NS_ENUM(NSInteger, MoviesViewControllerType) {
+    MoviesViewControllerTypeBoxOffice,
+    MoviesViewControllerTypeDvd,
+};
+
+- (id)initWithType:(MoviesViewControllerType)type;
+
 @end

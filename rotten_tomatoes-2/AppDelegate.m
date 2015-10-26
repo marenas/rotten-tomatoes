@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "MoviesViewController.h"
 
 @interface AppDelegate ()
 
@@ -17,6 +18,26 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    self.window = [[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]];
+    
+    MoviesViewController *boxOfficeVC = [[MoviesViewController alloc] initWithType:MoviesViewControllerTypeBoxOffice];
+    UINavigationController* boxOfficeNVC = [[UINavigationController alloc] initWithRootViewController:boxOfficeVC];
+    boxOfficeNVC.tabBarItem.image = [UIImage imageNamed:@"Box Office Image"];
+    boxOfficeNVC.tabBarItem.title = @"Box Office";
+    [boxOfficeNVC.navigationBar setBarTintColor:[UIColor colorWithRed:0.55 green:0.76 blue:0.29 alpha:1.0]];
+    
+    MoviesViewController *dvdVC = [[MoviesViewController alloc] initWithType:MoviesViewControllerTypeDvd];
+    UINavigationController* dvdNVC = [[UINavigationController alloc] initWithRootViewController:dvdVC];
+    dvdNVC.tabBarItem.image = [UIImage imageNamed:@"DVD Image"];                            
+    dvdNVC.tabBarItem.title = @"Top DVDs";
+    [dvdNVC.navigationBar setBarTintColor:[UIColor colorWithRed:0.00 green:0.74 blue:0.83 alpha:1.0]];
+    
+    UITabBarController *tabBarController = [[UITabBarController alloc] init];
+    tabBarController.viewControllers = @[boxOfficeNVC, dvdNVC];
+    
+    self.window.rootViewController = tabBarController;
+    [self.window makeKeyAndVisible];
+    
     return YES;
 }
 
